@@ -1,5 +1,5 @@
 function [error_train, error_val] = ...
-    learningCurve(X, y, Xval, yval, lambda)
+    learningCurve(X, y, Xval, yval, input_layer_size, hidden_layer_size, num_labels, lambda)
 %LEARNINGCURVE Generates the train and cross validation set errors needed 
 %to plot a learning curve
 %   [error_train, error_val] = ...
@@ -55,13 +55,15 @@ error_val   = zeros(m, 1);
 
 for i = 1:m
     % We train theta on the first i examples
-    xPartition = [ones(i, 1) X(1:i, :)];
-    [theta] = trainLinearReg(xPartition, y(1:i), lambda);
-    error_train(i) = nnCostFunction(xPartition(1:i, :), y(1:i), theta, 0); % Error has no regularization so lambda is zero
+    xPartition = X(1:i, :);
+    yPartition = y(1:i, :);
+    [nn_params, cost] = train(xPartition, yPartition, input_layer_size, hidden_layer_size, num_labels, lambda);
+    % [theta] = trainLinearReg(xPartition, y(1:i), lambda);
+    error_train(i) = nnCostFunction(nn_params, input_layer_size, hidden_layer_size, num_labels, xPartition, yPartition, 0); % Error has no regularization so lambda is zero
     % For error_val we find error given whole cross validation set, but
     % theta was only trained on first i rows from X
-    xValWithOnes = [ones(size(Xval,1),1) Xval];
-    error_val(i) = nnCostFunction(xValWithOnes, yval, theta, 0); 
+    % xValWithOnes = [ones(size(Xval,1),1) Xval];
+    error_val(i) = nnCostFunction(nn_params, input_layer_size, hidden_layer_size, num_labels, Xval, yval, 0); 
 end
 
 

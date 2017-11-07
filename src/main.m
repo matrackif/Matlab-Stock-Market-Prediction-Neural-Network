@@ -13,14 +13,50 @@ stock_attributes_file = 'results_daily_CDR.csv';
 format longE; 
 X = csvread(input_dates_file);
 y = csvread(stock_attributes_file);
-[normalized_x, mu, sigma] = featureNormalize(X);  % Normalize
-
+% [normalized_x, mu, sigma] = featureNormalize(X);  % Normalize
 
 % Plot data
 plot(X, y(:, 4));
 xlabel('Date in seconds from Jan 1, 1970 (Unix Time)')
 ylabel('Closing price in USD')
+%% =========== Learning Curve =============
+%
 
+% Partition X into cross validation set, training set, and test set
+training_set_size = (0.6 * size(X, 1));
+cross_validation_size = (0.2 * size(X, 1));
+test_set_size = (0.2 * size(X, 1));
+% TODO cast to integer?
+cv = X((training_set_size + 1):(training_set_size + cross_validation_size), :);
+cv_y = y((training_set_size + 1):(training_set_size + cross_validation_size), :);
+test = X((training_set_size + cross_validation_size + 1):(training_set_size + cross_validation_size + cross_validation_size), :);
+test_y = y((training_set_size + cross_validation_size + 1):(training_set_size + cross_validation_size + cross_validation_size), :);
+X = X(1:training_set_size, :);
+y = y(1:training_set_size, :);
+[normalized_x, mu, sigma] = featureNormalize(X);
+
+lambda = 0;
+% We do not normalize when finding the learning curve? According to Andrew
+% NG's example
+[error_train, error_val] = ...
+    learningCurve(X, y, ...
+                  cv, cv_y, ...
+                  input_layer_size, hidden_layer_size, num_labels, ...
+                  lambda);
+              
+plot(1:training_set_size, error_train, 1:training_set_size, error_val);
+title('Learning curve for linear regression')
+legend('Train', 'Cross Validation')
+xlabel('Number of training examples')
+ylabel('Error')
+% axis([0 13 0 150])
+
+fprintf('# Training Examples\tTrain Error\tCross Validation Error\n');
+% for i = 1:m
+    % fprintf('  \t%d\t\t%f\t%f\n', i, error_train(i), error_val(i));
+% end
+
+%%%%%%%%%%
 lambda = 3;
 [nn_params, cost] = train(normalized_x, y, input_layer_size, hidden_layer_size, num_labels, lambda)
 
@@ -44,4 +80,10 @@ future = bsxfun(@minus, future, mu);
 future = bsxfun(@rdivide, future, sigma); 
 future_pred = predict(Theta1, Theta2, future);
 
+% Plot prediction
+plot(normalized_x, y(:, 4), normalized_x, pred(:, 4));
+title('Predction vs Actual Prices')
+legend('Training Set', 'Prediction')
+xlabel('Date (Normalized)')
+ylabel('Closing Price')
 fprintf('\nTraining Set Accuracy: %f\n', mean(double(pred == y)) * 100);
